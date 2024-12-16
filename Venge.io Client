@@ -1,0 +1,324 @@
+// ==User Script==
+// @name       Venge.io Client
+// @version    1.4
+// @description  A client made by Disease for people to cheat on a web game LMFAO
+// @author     Disease (CPScript)
+// @match      https://venge.io/
+// @grant      none
+// @run-at     document-start
+// ==/User Script==
+
+class Hack {
+    constructor() {
+        this.settings = {
+            infAmmo: true,
+            infJump: true,
+            autoKill: true,
+            speedMlt: 0,
+            esp: true,
+            aimbot: true,
+            timeScale: 0
+        };
+        this.hooks = {
+            network: null,
+            movement: null,
+            anticheat: true,
+        };
+
+        this.createUI();
+        this.setupHooks();
+        this.setupBinds();
+    }
+
+    createUI() {
+        const uiContainer = document.createElement('div');
+        uiContainer.style.position = 'fixed';
+        uiContainer.style.top = '10px';
+        uiContainer.style.right = '10px';
+        uiContainer.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
+        uiContainer.style.color = 'white';
+        uiContainer.style.padding = '10px';
+        uiContainer.style.borderRadius = '5px';
+        uiContainer.style.zIndex = '9999';
+        uiContainer.style.fontFamily = 'Arial, sans-serif';
+        uiContainer.style.fontSize = '14px';
+        uiContainer.style.boxShadow = '0 0 10px rgba(0, 0, 0, 0.5)';
+
+        const title = document.createElement('h3');
+        title.innerText = 'Hack Controls';
+        title.style.margin = '0 0 10px 0';
+        uiContainer.appendChild(title);
+
+        const settings = [
+            { name: 'Infinite Ammo', key: 'infAmmo' },
+            { name: 'Infinite Jump', key: 'infJump' },
+            { name: 'Auto Kill', key: 'autoKill' },
+            { name: 'ESP', key: 'esp' },
+            { name: 'Aimbot', key: 'aimbot' },
+            { name: 'Speed Multiplier', key: 'speedMlt' },
+            { name: 'Time Scale', key: 'timeScale' }
+        ];
+
+        settings.forEach(setting => {
+            const label = document.createElement('label');
+            label.style.display = 'block';
+            label.style.marginBottom = '5px';
+
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.checked = this.settings[setting.key];
+            checkbox.style.marginRight = '5px';
+            checkbox.addEventListener('change', () => {
+                this.settings[setting.key] = checkbox.checked;
+                this.updateUI();
+            });
+
+            label.appendChild(checkbox);
+            label.appendChild(document.createTextNode(setting.name));
+            uiContainer.appendChild(label);
+        });
+
+        // Developer label
+        const developerLabel = document.createElement('div');
+        developerLabel.innerText = 'Developed by Disease';
+        developerLabel.style.position = 'absolute';
+        developerLabel.style.bottom = '10px';
+        developerLabel.style.right = '10px';
+        developerLabel.style.color = 'lightgray';
+        developerLabel.style.fontSize = '12px';
+        developerLabel.style.opacity = '0.8';
+        uiContainer.appendChild(developerLabel);
+
+        document.body.appendChild(uiContainer);
+        this.uiContainer = uiContainer;
+    }
+
+    updateUI() {
+        const settings = [
+            { key: 'infAmmo', name: 'Infinite Ammo' },
+            { key: 'infJump', name: 'Infinite Jump' },
+            { key: 'autoKill', name: 'Auto Kill' },
+            { key: 'esp', name: 'ESP' },
+            { key: 'aimbot', name: 'Aimbot' },
+            { key: 'speedMlt', name: 'Speed Multiplier' },
+            { key: 'timeScale', name: 'Time Scale' }
+        ];
+
+        settings.forEach(setting => {
+            const checkbox = this.uiContainer.querySelector(`input[type="checkbox"][name="${setting.key}"]`);
+            if (checkbox) {
+                checkbox.checked = this.settings[setting.key];
+            }
+        });
+    }
+
+    async waitForProp(prop) {
+        while (!window.hasOwnProperty(prop)) {
+            await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+    }
+
+    setupHooks() {
+        const hooks = ['Movement', 'NetworkManager', ' VengeGuard', 'Label'];
+        hooks.forEach(hook => {
+            this.waitForProp(hook).then(this[`hook${hook}`]).catch(console.error);
+        });
+    }
+
+    setupBinds() {
+        window.addEventListener("keydown", (e) => this.handleKeyPress(e));
+    }
+
+    handleKeyPress(e) {
+        const keyActions = {
+            190: () => this.toggleSetting('autoKill', "Kill on Respawn"),
+            188: () => this.toggleSetting('infAmmo', "Infinite Ammo"),
+            186: () => this.toggleSetting('aimbot', "Aimbot"),
+            222: () => this.toggleSetting('infJump', "Infinite Jump"),
+            191: () => this.changeSpeedMultiplier(),
+            219: () => this.teleportToSafety(),
+            221: () => this.toggleSetting('esp', "ESP"),
+            220: () => this.changeTimeScale()
+        };
+
+        if (keyActions[e.keyCode]) {
+            keyActions[e.keyCode]();
+        }
+    }
+
+    toggleSetting(setting, message) {
+        this.settings[setting] = !this.settings[setting];
+        this.updateUI();
+        this.hooks.network.app.fire("Chat:Message", "Hacks", `${message} - ${this.settings[setting] ? "Enabled" : "Disabled"}`, true);
+    }
+
+    changeSpeedMultiplier() {
+        this.settings.speedMlt = (this.settings.speedMlt + 1) % 5;
+        this.hooks.network.app.fire("Chat:Message", "Hacks", `Speed Multiplier - ${this.settings.speedMlt + 1}x`, true);
+    }
+
+    teleportToSafety() {
+        this.hooks.network.app.fire("Chat:Message", "Hacks", "Teleporting you to Safety", true);
+        this.hooks.movement.app.fire("Player:Respawn", true);
+    }
+
+    changeTimeScale() {
+        this.settings.timeScale = (this.settings.timeScale + 1) % 5;
+        pc.app.timeScale = this.settings.timeScale + 1;
+        this.hooks.network.app.fire("Chat:Message", "Hacks", `Timescale - ${this.settings.timeScale + 1}x`, true);
+    }
+
+    hookMovement() {
+        const originalUpdate = Movement.prototype.update;
+        let defaultSpeeds = [];
+
+        Movement.prototype.update = (t) => {
+            if (!this.hooks.movement) {
+                this.hooks.movement = this;
+                defaultSpeeds = [this.defaultSpeed, this.strafingSpeed];
+            }
+            this.onTick();
+            originalUpdate.call(this, t);
+            this.applyMovementSettings(defaultSpeeds);
+        };
+        console.log("Movement Hooked");
+    }
+
+    applyMovementSettings(defaultSpeeds) {
+        if (this.settings.infAmmo) {
+            this.setAmmoFull();
+            this.isHitting = false;
+        }
+        if (this.settings.infJump) {
+            this.isLanded = true;
+            this.bounceJumpTime = 0;
+            this.isJumping = false;
+        }
+        this.defaultSpeed = defaultSpeeds[0] * (this.settings.speedMlt + 1);
+        this.strafingSpeed = defaultSpeeds[1] * (this.settings.speedMlt + 1);
+    }
+
+    hookNetwork() {
+        const originalInitialize = NetworkManager.prototype.initialize;
+        NetworkManager.prototype.initialize = () => {
+            if (!this.hooks.network) {
+                this.hooks.network = this;
+            }
+            originalInitialize.call(this);
+        };
+
+        const originalRespawn = NetworkManager.prototype.respawn;
+        NetworkManager.prototype.respawn = (e) => {
+            originalRespawn.call(this, e);
+            if (e && e.length > 0 && this.settings.autoKill) {
+                const targetId = e[0];
+                const targetPlayer = this.getPlayerById(targetId);
+                if (targetPlayer && targetId !== this.playerid) {
+                    setTimeout(() => {
+                        this.send(["da", targetId, 100, 1, targetPlayer.position.x, targetPlayer.position.y, targetPlayer.position.z]);
+                    }, 3500);
+                }
+            }
+        };
+        console.log("Network Hooked");
+    }
+
+    hookAnticheat() {
+        VengeGuard.prototype.onCheck = () => {
+            this.app.fire("Network:Guard", 1);
+        };
+        console.log("Anticheat Hooked");
+    }
+
+    hookLabel() {
+        Label.prototype.update = (t) => {
+            if (!pc.isSpectator) {
+                if (this.player.isDeath) {
+                    this.labelEntity.enabled = false;
+                    return false;
+                }
+                if (Date.now() - this.player.lastDamage > 1800 && !this.settings .esp) {
+                    this.labelEntity.enabled = false;
+                    return false;
+                }
+            }
+            this.updateLabelPosition();
+        };
+        console.log("Label Hooked");
+    }
+
+    updateLabelPosition() {
+        const position = new pc.Vec3();
+        const camera = this.currentCamera;
+        const pixelRatio = this.app.graphicsDevice.maxPixelRatio;
+        const scale = this.screenEntity.screen.scale;
+
+        camera.worldToScreen(this.headPoint.getPosition(), position);
+        position.x *= pixelRatio;
+        position.y *= pixelRatio;
+
+        if (position.x > 0 && position.x < this.app.graphicsDevice.width && position.y > 0 && position.y < this.app.graphicsDevice.height && position.z > 0) {
+            this.labelEntity.setLocalPosition(position.x / scale, (this.app.graphicsDevice.height - position.y) / scale, 0);
+            this.labelEntity.enabled = true;
+        } else {
+            this.labelEntity.enabled = false;
+        }
+    }
+
+    onTick() {
+        if (this.settings.aimbot) {
+            this.aimAtClosestPlayer();
+        }
+    }
+
+    aimAtClosestPlayer() {
+        let closest = null;
+        let closestDistance = null;
+
+        const players = this.hooks.network.players;
+        const currentPosition = this.hooks.movement.entity.getPosition();
+
+        players.forEach(target => {
+            const distance = this.calculateDistance(target.position, currentPosition);
+            if (distance < closestDistance || closestDistance === null) {
+                closest = target;
+                closestDistance = distance;
+            }
+        });
+
+        this.adjustAim(closest, currentPosition);
+    }
+
+    calculateDistance(targetPosition, currentPosition) {
+        return Math.sqrt(
+            Math.pow(targetPosition.y - currentPosition.y, 2) +
+            Math.pow(targetPosition.x - currentPosition.x, 2) +
+            Math.pow(targetPosition.z - currentPosition.z, 2)
+        );
+    }
+
+    adjustAim(closest, currentPosition) {
+        if (closest) {
+            const rayCastList = pc.app.systems.rigidbody.raycastAll(currentPosition, closest.getPosition()).map(x => x.entity.tags._list.toString());
+            const rayCastCheck = rayCastList.length === 1 && rayCastList[0] === "Player";
+
+            if (rayCastCheck) {
+                const aimDirection = Utils.lookAt(closest.position.x, closest.position.z, currentPosition.x, currentPosition.z);
+                this.hooks.movement.lookX = aimDirection * 57.29577951308232 + (Math.random() / 10 - Math.random() / 10);
+                this.hooks.movement.lookY = -1 * this.getXDirection(closest.position, currentPosition) * 57.29577951308232;
+                this.hooks.movement.leftMouse = true;
+                this.hooks.movement.setShooting(this.hooks.movement.lastDelta);
+            } else {
+                this.hooks.movement.leftMouse = false;
+            }
+        }
+    }
+
+    getXDirection(targetPosition, currentPosition) {
+        const deltaY = Math.abs(targetPosition.y - currentPosition.y);
+        const distance = this.calculateDistance(targetPosition, currentPosition);
+        return Math.asin(deltaY / distance) * (targetPosition.y > currentPosition.y ? -1 : 1);
+    }
+}
+
+const FakeGuard = new Hack();
